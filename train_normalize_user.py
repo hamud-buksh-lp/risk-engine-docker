@@ -1,12 +1,16 @@
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler, LabelEncoder
 from sklearn.ensemble import IsolationForest
 import joblib
+import numpy as np
 
 # Function to normalize features and train per-user models
 def process_and_train_model(file_path, output_file):
     # Load data
     df = pd.read_csv(file_path)
+
+    # Handle missing IP addresses
+    df['ip_address'].fillna('unknown_ip', inplace=True)
 
     # Select relevant features
     features = df[[
@@ -54,9 +58,9 @@ def process_and_train_model(file_path, output_file):
     user_ids = normalized_df['user_id'].unique()
 
     for user in user_ids:
-        user_data = normalized_df[normalized_df['user_id'] == user].drop('user_id', axis=1)
+        user_data = normalized_df[normalized_df['user_id'] == user].drop(['user_id', 'ip_address'], axis=1)
 
-        # Use Isolation Forest for anomaly detection
+        # Use Isolation Forest for anomaly detection on the primary features
         model = IsolationForest(n_estimators=100, contamination=0.1, random_state=42)
         model.fit(user_data)
 
@@ -66,13 +70,13 @@ def process_and_train_model(file_path, output_file):
         # Train a separate Isolation Forest model specifically for the IP address feature
         user_ip_data = df[df['user_id'] == user][['ip_address']]
 
-        # Encode IP addresses as unique numeric values
-        ip_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-        encoded_ip = ip_encoder.fit_transform(user_ip_data)
+        # Use label encoding instead of one-hot encoding for IPs to save memory
+        ip_encoder = LabelEncoder()
+        user_ip_data['ip_encoded'] = ip_encoder.fit_transform(user_ip_data['ip_address'])
 
-        # Train Isolation Forest on encoded IP addresses
+        # Reshape for model fitting
         ip_model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
-        ip_model.fit(encoded_ip)
+        ip_model.fit(user_ip_data[['ip_encoded']])
 
         # Save the IP model and encoder for this user
         joblib.dump(ip_model, f'user_ip_model_{user}.joblib')
