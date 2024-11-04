@@ -54,7 +54,7 @@ def calculate_risk_score(normalized_data):
 def load_user_model(user_id):
     """Load the per-user IsolationForest model if it exists."""
     try:
-        model_path = f'models/user_model_{user_id}.joblib'
+        model_path = f'user_model_{user_id}.joblib'
         user_model = joblib.load(model_path)
         return user_model
     except FileNotFoundError:
