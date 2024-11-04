@@ -51,6 +51,27 @@ def calculate_risk_score(normalized_data):
 
     return feature_scores_clipped, total_score
 
+def load_user_model(user_id):
+    """Load the per-user IsolationForest model if it exists."""
+    try:
+        model_path = f'models/user_model_{user_id}.joblib'
+        user_model = joblib.load(model_path)
+        return user_model
+    except FileNotFoundError:
+        print(f"No model found for user {user_id}")
+        return None
+
+def calculate_user_risk_score(user_model, normalized_data):
+    """Calculate the anomaly score for the specific user based on their model."""
+    if user_model is not None:
+        # Isolation Forest returns -1 for anomaly and 1 for normal data
+        # We transform it to a risk score: 1 for anomaly and 0 for normal
+        is_anomaly = user_model.predict(normalized_data)[0]
+        user_score = 1.0 if is_anomaly == -1 else 0.0
+        return user_score
+    else:
+        return None  # No user-specific model, no score
+
 # Lambda handler
 def lambda_handler(event, context):
     try:
@@ -67,18 +88,20 @@ def lambda_handler(event, context):
 
         # Calculate the individual scores and risk score
         feature_scores_clipped, risk_score = calculate_risk_score(normalized_data)
+        
+        # Add user-specific score if available
+        user_id = input_data.get('user_id')
+        user_model = load_user_model(user_id)
+        user_risk_score = calculate_user_risk_score(user_model, normalized_data)
 
-        # Prepare the response as a dictionary
-        response_body = {
-            'user_id': input_data.get('user_id', 'unknown'),
-            'feature_scores': feature_scores_clipped,
-            'risk_score': risk_score
-        }
 
         # Return the result as JSON (without extra escape characters)
         return {
             'statusCode': 200,
-            'body': json.dumps(json.loads(response_body))  # Do not indent here to avoid extra newlines
+            'user_id': input_data.get('user_id', 'unknown'),
+            'feature_scores': feature_scores_clipped,
+            'risk_score': risk_score,
+            'user_risk_score': user_risk_score
         }
 
     except Exception as e:
