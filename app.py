@@ -101,7 +101,7 @@ def lambda_handler(event, context):
             'user_id': input_data.get('user_id', 'unknown'),
             'feature_scores': feature_scores_clipped,
             'risk_score': risk_score,
-            ' risk_score_user_model': user_risk_score
+            'risk_score_user_model': user_risk_score
         }
 
     except Exception as e:
