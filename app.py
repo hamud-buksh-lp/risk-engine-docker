@@ -38,7 +38,7 @@ def normalize_input(data):
 
 # Calculate the risk score based on individual feature scores
 def calculate_risk_score(normalized_data):
-    # Define weights for each feature (currently equal weights)
+    # Define weights for fingerprint features (weight = 7)
     num_features = len(normalized_data.columns)
     feature_weights = np.ones(num_features)
 
@@ -54,7 +54,7 @@ def calculate_risk_score(normalized_data):
 def load_user_model(user_id):
     """Load the per-user IsolationForest model if it exists."""
     try:
-        model_path = f'user_model_{user_id}.joblib'
+        model_path = f'user_fingerprint_model_{user_id}.joblib'
         user_model = joblib.load(model_path)
         return user_model
     except FileNotFoundError:
@@ -87,21 +87,45 @@ def lambda_handler(event, context):
         normalized_data = normalize_input(input_data)
 
         # Calculate the individual scores and risk score
-        feature_scores_clipped, risk_score = calculate_risk_score(normalized_data)
-        
+        feature_scores_clipped, fingerprint_risk_score = calculate_risk_score(normalized_data)
+
         # Add user-specific score if available
         user_id = input_data.get('user_id')
         user_model = load_user_model(user_id)
         user_risk_score = calculate_user_risk_score(user_model, normalized_data)
 
+        # Calculate the IP risk score based on the user's IP model
+        ip_model_path = f'user_ip_model_{user_id}.joblib'
+        try:
+            ip_model = joblib.load(ip_model_path)
+            ip_encoder_path = f'ip_encoder_{user_id}.joblib'
+            ip_encoder = joblib.load(ip_encoder_path)
+
+            # Prepare the IP data for scoring
+            ip_data = {
+                'ip_address': input_data.get('ip_address')  # Assuming the IP is included in the input
+            }
+            normalized_ip_data = normalize_input(ip_data)  # Normalize IP data
+            ip_score = ip_model.predict(ip_encoder.transform(pd.DataFrame([ip_data])))  # Predict IP anomaly
+            ip_risk_score = 1.0 if ip_score[0] == -1 else 0.0
+        except FileNotFoundError:
+            ip_risk_score = 0.0  # No IP model found, consider it normal
+
+        # Calculate overall weighted score (weighted fingerprint score and IP score)
+        weighted_fingerprint_score = fingerprint_risk_score * 7
+        weighted_ip_score = ip_risk_score * 3
+        total_weight = 10  # 7 + 3
+        overall_score = (weighted_fingerprint_score + weighted_ip_score) / total_weight
 
         # Return the result as JSON (without extra escape characters)
         return {
             'statusCode': 200,
             'user_id': input_data.get('user_id', 'unknown'),
             'feature_scores': feature_scores_clipped,
-            'risk_score': risk_score,
-            'risk_score_user_model': user_risk_score
+            'risk_score_fingerprint': fingerprint_risk_score,
+            'risk_score_user_model': user_risk_score,
+            'ip_risk_score': ip_risk_score,
+            'overall_score': overall_score
         }
 
     except Exception as e:
@@ -121,10 +145,11 @@ if __name__ == '__main__':
         "colorDepth": 24,
         "deviceMemory": 4,
         "hardwareConcurrency": 4,
-        "language": "en",
+        "language": "en-GB",
         "platform": "Windows",
         "screenResolution": "1920x1080",
         "timezone": "UTC",
-        "touchSupport": 1
+        "touchSupport": 1,
+        "ip_address": "192.168.0.5"  # Example IP address
     }
     print(lambda_handler(test_event, None))
