@@ -39,8 +39,9 @@ def process_and_train_model(file_path, output_file):
     # Concatenate the scaled numerical and encoded categorical features
     normalized_df = pd.concat([scaled_numerical_df, encoded_categorical_df], axis=1)
 
-    # Add user_id to the normalized DataFrame
+    # Add user_id and IP address to the normalized DataFrame
     normalized_df['user_id'] = df['user_id']
+    normalized_df['ip_address'] = df['ip_address']
 
     # Save the normalized DataFrame to a CSV file
     normalized_df.to_csv(output_file, index=False)
@@ -60,7 +61,22 @@ def process_and_train_model(file_path, output_file):
         model.fit(user_data)
 
         # Save the model for this user
-        joblib.dump(model, f'user_model_{user}.joblib')
+        joblib.dump(model, f'user_fingerprint_model_{user}.joblib')
+
+        # Train a separate Isolation Forest model specifically for the IP address feature
+        user_ip_data = df[df['user_id'] == user][['ip_address']]
+
+        # Encode IP addresses as unique numeric values
+        ip_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        encoded_ip = ip_encoder.fit_transform(user_ip_data)
+
+        # Train Isolation Forest on encoded IP addresses
+        ip_model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
+        ip_model.fit(encoded_ip)
+
+        # Save the IP model and encoder for this user
+        joblib.dump(ip_model, f'user_ip_model_{user}.joblib')
+        joblib.dump(ip_encoder, f'ip_encoder_{user}.joblib')
 
     return normalized_df
 
