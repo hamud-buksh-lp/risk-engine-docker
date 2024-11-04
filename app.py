@@ -78,7 +78,7 @@ def lambda_handler(event, context):
         # Return the result as JSON (without extra escape characters)
         return {
             'statusCode': 200,
-            'body': json.dumps(json.load(response_body))  # Do not indent here to avoid extra newlines
+            'body': json.dumps(json.loads(response_body))  # Do not indent here to avoid extra newlines
         }
 
     except Exception as e:
