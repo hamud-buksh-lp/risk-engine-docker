@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Lambda Risk Score Function
+
+Resources:
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageUri: <your-docker-image-uri>  # This will be updated after building your Docker image
+      Timeout: 30
+      MemorySize: 128
+      Policies: AWSLambdaBasicExecutionRole  # Adjust as necessary
+      Environment:
+        # Add any environment variables if needed
+        ENV_VAR_NAME: "value"
+
+Outputs:
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      ImageUri: !GetAtt LambdaFunction.Arn
