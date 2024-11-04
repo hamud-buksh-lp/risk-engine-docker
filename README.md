@@ -11,3 +11,8 @@ docker tag risk-score-v1 <account_id>.dkr.ecr.<region>.amazonaws.com/risk-score-
 
 3. Push the image to ECR
 docker push <account_id>.dkr.ecr.<region>.amazonaws.com/risk-score-v1:latest 
+
+4. To push changes using Git
+git add README.md app.py 
+git commit -m "JSON Refactor"
+git push docker main
