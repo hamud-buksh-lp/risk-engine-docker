@@ -8,8 +8,11 @@ def generate_ip_address(anomaly=False):
     """Generates an IP address, with an option for an anomaly outside specified range."""
     if anomaly:
         # Generate an IP outside of the typical range (anomalous IP)
-        octet = random.randint(21, 255)
-        return f"192.168.0.{octet}"
+        octet1 = random.randint(21, 255)
+        octet2 = random.randint(21, 255)
+        octet3 = random.randint(21, 255)
+        octet4 = random.randint(21, 255)
+        return f"{octet1}.{octet2}.{octet3}.{octet4}"
     else:
         # Normal IP within 192.168.0.1 to 192.168.0.20
         octet = random.randint(1, 20)
@@ -51,7 +54,7 @@ def generate_fingerprint_data(num_records=5000, num_users=5, anomaly_percentage=
 
 # Main code to generate and save the dataset
 if __name__ == "__main__":
-    num_records = 5000
+    num_records = 8000
     num_users = 5
     anomaly_percentage = 0.1
 

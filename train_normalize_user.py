@@ -1,8 +1,17 @@
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder, MinMaxScaler, LabelEncoder
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 from sklearn.ensemble import IsolationForest
 import joblib
 import numpy as np
+import ipaddress
+
+# Function to convert IP to integer
+def ip_to_int(ip_address):
+    try:
+        return int(ipaddress.ip_address(ip_address))
+    except ValueError:
+        # Handle any non-standard IPs like 'unknown_ip'
+        return None  # Or a specific integer if you want a fallback
 
 # Function to normalize features and train per-user models
 def process_and_train_model(file_path, output_file):
@@ -11,6 +20,9 @@ def process_and_train_model(file_path, output_file):
 
     # Handle missing IP addresses
     df['ip_address'].fillna('unknown_ip', inplace=True)
+
+    # Convert IP addresses to integer format
+    df['ip_address_int'] = df['ip_address'].apply(ip_to_int)
 
     # Select relevant features
     features = df[[
@@ -40,12 +52,12 @@ def process_and_train_model(file_path, output_file):
     # Create DataFrame for scaled numerical features
     scaled_numerical_df = pd.DataFrame(scaled_numerical, columns=numerical_cols)
 
-    # Concatenate the scaled numerical and encoded categorical features
+    # Concatenate the scaled numerical, encoded categorical, and IP address features
     normalized_df = pd.concat([scaled_numerical_df, encoded_categorical_df], axis=1)
 
-    # Add user_id and IP address to the normalized DataFrame
+    # Add user_id and the integer IP address to the normalized DataFrame
     normalized_df['user_id'] = df['user_id']
-    normalized_df['ip_address'] = df['ip_address']
+    normalized_df['ip_address_int'] = df['ip_address_int']
 
     # Save the normalized DataFrame to a CSV file
     normalized_df.to_csv(output_file, index=False)
@@ -58,9 +70,9 @@ def process_and_train_model(file_path, output_file):
     user_ids = normalized_df['user_id'].unique()
 
     for user in user_ids:
-        user_data = normalized_df[normalized_df['user_id'] == user].drop(['user_id', 'ip_address'], axis=1)
+        user_data = normalized_df[normalized_df['user_id'] == user].drop(['user_id', 'ip_address_int'], axis=1)
 
-        # Use Isolation Forest for anomaly detection on the primary features
+        # Use Isolation Forest for anomaly detection on primary features
         model = IsolationForest(n_estimators=100, contamination=0.1, random_state=42)
         model.fit(user_data)
 
@@ -68,19 +80,15 @@ def process_and_train_model(file_path, output_file):
         joblib.dump(model, f'data/user_fingerprint_model_{user}.joblib')
 
         # Train a separate Isolation Forest model specifically for the IP address feature
-        user_ip_data = df[df['user_id'] == user][['ip_address']]
+        user_ip_data = normalized_df[normalized_df['user_id'] == user][['ip_address_int']].dropna()
 
-        # Use label encoding instead of one-hot encoding for IPs to save memory
-        ip_encoder = LabelEncoder()
-        user_ip_data['ip_encoded'] = ip_encoder.fit_transform(user_ip_data['ip_address'])
+        # Only fit model if there are IP addresses to train on
+        if not user_ip_data.empty:
+            ip_model = IsolationForest(n_estimators=100, contamination=0.1, random_state=42)
+            ip_model.fit(user_ip_data)
 
-        # Reshape for model fitting
-        ip_model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
-        ip_model.fit(user_ip_data[['ip_encoded']])
-
-        # Save the IP model and encoder for this user
-        joblib.dump(ip_model, f'data/user_ip_model_{user}.joblib')
-        joblib.dump(ip_encoder, f'data/ip_encoder_{user}.joblib')
+            # Save the IP model for this user
+            joblib.dump(ip_model, f'data/user_ip_model_{user}.joblib')
 
     return normalized_df
 
