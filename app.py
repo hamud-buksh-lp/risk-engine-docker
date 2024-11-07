@@ -4,13 +4,13 @@ import joblib
 import json
 
 # Load the saved models (OneHotEncoder and MinMaxScaler)
-one_hot_encoder = joblib.load('one_hot_encoder.joblib')
-scaler = joblib.load('scaler.joblib')
+one_hot_encoder = joblib.load('data/one_hot_encoder.joblib')
+scaler = joblib.load('data/scaler.joblib')
 
 def load_user_model(user_id):
     """Load the per-user IsolationForest model if it exists."""
     try:
-        model_path = f'user_fingerprint_model_{user_id}.joblib'
+        model_path = f'data/user_fingerprint_model_{user_id}.joblib'
         user_model = joblib.load(model_path)
         return user_model
     except FileNotFoundError:
@@ -113,10 +113,10 @@ def lambda_handler(event, context):
         user_id = input_data.get('user_id')
 
         # Calculate the IP risk score based on the user's IP model
-        ip_model_path = f'user_ip_model_{user_id}.joblib'
+        ip_model_path = f'data/user_ip_model_{user_id}.joblib'
         try:
             ip_model = joblib.load(ip_model_path)
-            ip_encoder_path = f'ip_encoder_{user_id}.joblib'
+            ip_encoder_path = f'data/ip_encoder_{user_id}.joblib'
             ip_encoder = joblib.load(ip_encoder_path)
 
             # Prepare the IP data for scoring (handle separately)

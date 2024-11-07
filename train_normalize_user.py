@@ -51,8 +51,8 @@ def process_and_train_model(file_path, output_file):
     normalized_df.to_csv(output_file, index=False)
 
     # Save the encoders for later use
-    joblib.dump(one_hot_encoder, 'one_hot_encoder.joblib')
-    joblib.dump(scaler, 'scaler.joblib')
+    joblib.dump(one_hot_encoder, 'data/one_hot_encoder.joblib')
+    joblib.dump(scaler, 'data/scaler.joblib')
 
     # Train a per-user anomaly detection model
     user_ids = normalized_df['user_id'].unique()
@@ -65,7 +65,7 @@ def process_and_train_model(file_path, output_file):
         model.fit(user_data)
 
         # Save the model for this user
-        joblib.dump(model, f'user_fingerprint_model_{user}.joblib')
+        joblib.dump(model, f'data/user_fingerprint_model_{user}.joblib')
 
         # Train a separate Isolation Forest model specifically for the IP address feature
         user_ip_data = df[df['user_id'] == user][['ip_address']]
@@ -79,14 +79,14 @@ def process_and_train_model(file_path, output_file):
         ip_model.fit(user_ip_data[['ip_encoded']])
 
         # Save the IP model and encoder for this user
-        joblib.dump(ip_model, f'user_ip_model_{user}.joblib')
-        joblib.dump(ip_encoder, f'ip_encoder_{user}.joblib')
+        joblib.dump(ip_model, f'data/user_ip_model_{user}.joblib')
+        joblib.dump(ip_encoder, f'data/ip_encoder_{user}.joblib')
 
     return normalized_df
 
 # File paths
-input_file_path = 'fingerprint_data.csv'  # Replace with your input file path
-output_file_path = 'normalized_data.csv'  # Output file path
+input_file_path = 'data/fingerprint_data.csv'  # Replace with your input file path
+output_file_path = 'data/normalized_data.csv'  # Output file path
 
 # Process the data and train models
 processed_data = process_and_train_model(input_file_path, output_file_path)

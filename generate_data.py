@@ -57,5 +57,5 @@ if __name__ == "__main__":
 
     # Generate the data and save to a single CSV file
     df = generate_fingerprint_data(num_records=num_records, num_users=num_users, anomaly_percentage=anomaly_percentage)
-    df.to_csv("fingerprint_data.csv", index=False)
+    df.to_csv("data/fingerprint_data.csv", index=False)
     print("Data generated and saved to fingerprint_data.csv")
