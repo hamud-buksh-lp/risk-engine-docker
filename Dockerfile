@@ -1,10 +1,12 @@
 # Use the official AWS Lambda Python 3.8 base image
 FROM public.ecr.aws/lambda/python:3.8
 
+RUN mkdir -p ${LAMBDA_TASK_ROOT}/data
+
 # Copy the application and model files to the container
 COPY app.py ${LAMBDA_TASK_ROOT}
-COPY fingerprint_data.csv ${LAMBDA_TASK_ROOT}
-COPY normalized_data.csv ${LAMBDA_TASK_ROOT}
+COPY data/fingerprint_data.csv ${LAMBDA_TASK_ROOT}/data
+# COPY data/normalized_data.csv ${LAMBDA_TASK_ROOT}/data
 COPY train_normalize_user.py ${LAMBDA_TASK_ROOT}
 # Install dependencies
 COPY requirements.txt ./
